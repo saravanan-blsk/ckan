@@ -1063,6 +1063,8 @@ def create(context, data_dict):
 
     _rename_json_field(data_dict)
 
+    map_column_name(data_dict)
+
     trans = context['connection'].begin()
     try:
         # check if table already existes
@@ -1339,3 +1341,30 @@ def get_all_resources_ids_in_datastore():
                                         WHERE alias_of IS NULL''')
     query = _get_engine(data_dict).execute(resources_sql)
     return [q[0] for q in query.fetchall()]
+
+
+def map_column_name(data_dict):
+    """Map lengthy column names
+
+    :param data_dict: dict, dictionary of resource data
+    :return: dict, resourced data with formatted column names
+    """
+    counter = 1
+    for column in data_dict['fields']:
+        if column['id'] is not None and column['id'] is not '':
+            if len(column['id']) > 50:
+                old_name = column['id']
+                mapped_name = 'mapped_column_' + str(counter)
+                column['id'] = mapped_name
+                counter += 1
+                for row in data_dict['records']:
+                    dict_index = data_dict['records'].index(row)
+                    row[mapped_name] = row.pop(old_name)
+                    data_dict['records'][dict_index] = row
+
+    return data_dict
+
+
+
+
+
