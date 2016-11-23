@@ -1392,7 +1392,7 @@ def create_mapping_table(context, data_dict, mapped_columns):
 
     datastore_dict['fields'] = fields
     records = []
-    for key, value in mapped_columns:
+    for key, value in mapped_columns.iteritems():
         row = {'mapped_column': key, 'original_name': value}
         records.append(row)
 
