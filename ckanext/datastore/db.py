@@ -37,6 +37,9 @@ else:
 _pg_types = {}
 _type_names = set()
 _engines = {}
+_mapped_columns = {}
+_counter = True
+
 
 _TIMEOUT = 60000  # milliseconds
 
@@ -1112,6 +1115,8 @@ def create(context, data_dict):
         trans.rollback()
         raise
     finally:
+        if _counter:
+            create_mapping_table(context, data_dict)
         context['connection'].close()
 
 
@@ -1357,12 +1362,52 @@ def map_column_name(data_dict):
                 mapped_name = 'mapped_column_' + str(counter)
                 column['id'] = mapped_name
                 counter += 1
+                _mapped_columns[mapped_name] = old_name
                 for row in data_dict['records']:
                     dict_index = data_dict['records'].index(row)
                     row[mapped_name] = row.pop(old_name)
                     data_dict['records'][dict_index] = row
 
     return data_dict
+
+
+def create_mapping_table(context, data_dict):
+    """Create table to store the metadata of mapped column names
+
+    :param context: context
+    :param data_dict: data_dict
+    """
+    datastore_dict = {}
+    resource_dict = toolkit.get_action('resource_create')(
+         context, data_dict['resource'])
+    resource_id = resource_dict['id']
+    package_id = data_dict['resource']['package_id']
+
+    datastore_dict['resource_id'] = str(resource_id)
+    fields = [{'id': 'mapped_column', 'type': str},
+              {'id': 'original_name', 'type': str}]
+
+    datastore_dict['fields'] = fields
+    records = []
+    for key, value in _mapped_columns:
+        row = {'mapped_column': key, 'original_name': value}
+        records.append(row)
+
+    datastore_dict['records'] = records
+    datastore_dict['primary_key'] = 'mapped_column'
+
+    # changing counter value
+    global _counter
+    _counter = False
+
+    create(context, datastore_dict)
+
+
+
+
+
+
+
 
 
 
