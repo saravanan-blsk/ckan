@@ -37,8 +37,6 @@ else:
 _pg_types = {}
 _type_names = set()
 _engines = {}
-_mapped_columns = {}
-_counter = True
 
 
 _TIMEOUT = 60000  # milliseconds
@@ -1035,7 +1033,7 @@ def format_results(context, results, data_dict):
     return _unrename_json_field(data_dict)
 
 
-def create(context, data_dict):
+def create(context, data_dict, counter=True):
     '''
     The first row will be used to guess types not in the fields and the
     guessed types will be added to the headers permanently.
@@ -1066,7 +1064,11 @@ def create(context, data_dict):
 
     _rename_json_field(data_dict)
 
-    map_column_name(data_dict)
+    mapped_columns = {}
+
+    # Check if the column names are already mapped
+    if counter:
+        data_dict, mapped_columns = map_column_name(data_dict)
 
     trans = context['connection'].begin()
     try:
@@ -1115,8 +1117,8 @@ def create(context, data_dict):
         trans.rollback()
         raise
     finally:
-        if _counter:
-            create_mapping_table(context, data_dict)
+        if counter and len(mapped_columns) != 0:
+            create_mapping_table(context, data_dict, mapped_columns)
         context['connection'].close()
 
 
@@ -1354,6 +1356,7 @@ def map_column_name(data_dict):
     :param data_dict: dict, dictionary of resource data
     :return: dict, resourced data with formatted column names
     """
+    mapped_columns = {}
     counter = 1
     for column in data_dict['fields']:
         if column['id'] is not None and column['id'] is not '':
@@ -1362,18 +1365,18 @@ def map_column_name(data_dict):
                 mapped_name = 'mapped_column_' + str(counter)
                 column['id'] = mapped_name
                 counter += 1
-                _mapped_columns[mapped_name] = old_name
+                mapped_columns[mapped_name] = old_name
                 for row in data_dict['records']:
                     dict_index = data_dict['records'].index(row)
                     row[mapped_name] = row.pop(old_name)
                     data_dict['records'][dict_index] = row
+    return data_dict, mapped_columns
 
-    return data_dict
 
-
-def create_mapping_table(context, data_dict):
+def create_mapping_table(context, data_dict, mapped_columns):
     """Create table to store the metadata of mapped column names
 
+    :param mapped_columns: dict, mapped column names
     :param context: context
     :param data_dict: data_dict
     """
@@ -1389,18 +1392,14 @@ def create_mapping_table(context, data_dict):
 
     datastore_dict['fields'] = fields
     records = []
-    for key, value in _mapped_columns:
+    for key, value in mapped_columns:
         row = {'mapped_column': key, 'original_name': value}
         records.append(row)
 
     datastore_dict['records'] = records
     datastore_dict['primary_key'] = 'mapped_column'
 
-    # changing counter value
-    global _counter
-    _counter = False
-
-    create(context, datastore_dict)
+    create(context, datastore_dict, False)
 
 
 
