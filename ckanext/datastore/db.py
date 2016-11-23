@@ -1386,9 +1386,14 @@ def create_mapping_table(context, data_dict, mapped_columns):
     resource_id = resource_dict['id']
     package_id = data_dict['resource']['package_id']
 
+    for row in data_dict['fields']:
+        print row
+
+    datastore_dict['connection_url'] = data_dict['connection_url']
+
     datastore_dict['resource_id'] = str(resource_id)
-    fields = [{'id': 'mapped_column', 'type': str},
-              {'id': 'original_name', 'type': str}]
+    fields = [{'id': 'mapped_column', 'type': 'text'},
+              {'id': 'original_name', 'type': 'text'}]
 
     datastore_dict['fields'] = fields
     records = []
