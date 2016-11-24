@@ -39,6 +39,11 @@ class ColumnNameMapping:
         :param data_dict: data_dict
         """
         datastore_dict = {}
+
+        # Creating name for the mapping datastore
+        dataset_name = data_dict['resource']['name']
+        data_dict['resource']['name'] = dataset_name + '_mapping'
+
         resource_dict = toolkit.get_action('resource_create')(
             context, data_dict['resource'])
         resource_id = resource_dict['id']
