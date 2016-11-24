@@ -74,6 +74,9 @@ class ColumnNameMapping:
         """
         truncated_name = original_name[:60]
 
+        # Sanitizing truncated name so that it can be insert into db
+        truncated_name = truncated_name.replace(" ", "_").replace(",", "")
+
         if truncated_name in truncated_columns:
             counter = truncated_columns.get(truncated_name, 0) + 1
             truncated_name = truncated_name + '_' + str(counter)
