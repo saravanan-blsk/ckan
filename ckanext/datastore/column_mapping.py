@@ -3,7 +3,7 @@ import db
 
 
 class ColumnNameMapping:
-    """Creates data store table for mapping lengthy column names."""
+    """Create data store table for mapping lengthy column names."""
 
     @staticmethod
     def map_column_name(data_dict):
@@ -71,7 +71,7 @@ class ColumnNameMapping:
 
     @staticmethod
     def create_truncated_name(original_name, truncated_columns):
-        """creates truncated name from original column names
+        """create truncated name from original column names
 
         :param original_name: str, original column name
         :param truncated_columns: dict , dictionary of truncated_column name
@@ -86,7 +86,7 @@ class ColumnNameMapping:
             counter = truncated_columns.get(truncated_name, 0) + 1
             truncated_name = truncated_name + '_' + str(counter)
             truncated_columns.update({truncated_name: counter})
-
-        truncated_columns.update({truncated_name: 1})
+        else:
+            truncated_columns.update({truncated_name: 1})
 
         return truncated_name, truncated_columns
