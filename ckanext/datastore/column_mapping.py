@@ -41,16 +41,24 @@ class ColumnNameMapping:
         datastore_dict = {}
 
         # Creating name for the mapping datastore
-        dataset_name = data_dict['resource']['name']
-        data_dict['resource']['name'] = dataset_name + '_mapping'
+        try:
+            dataset_name = data_dict.get('resource').get('name')
+            data_dict['resource']['name'] = dataset_name + '_mapping'
+
+        except Exception:
+
+            resource_data = toolkit.get_action('resource_show')(
+                context, {'id': data_dict.get('resource_id')})
+
+            dataset_name = resource_data.get('name')
+            data_dict.update({'resource': {}})
+            data_dict['resource'].update({'name': dataset_name + '_mapping'})
+            data_dict['resource'].update({'package_id': resource_data.get('package_id')})
 
         resource_dict = toolkit.get_action('resource_create')(
             context, data_dict['resource'])
         resource_id = resource_dict['id']
         # package_id = data_dict['resource']['package_id']
-
-        for row in data_dict['fields']:
-            print row
 
         datastore_dict['connection_url'] = data_dict['connection_url']
 
@@ -84,8 +92,9 @@ class ColumnNameMapping:
 
         if truncated_name in truncated_columns:
             counter = truncated_columns.get(truncated_name, 0) + 1
-            truncated_name = truncated_name + '_' + str(counter)
             truncated_columns.update({truncated_name: counter})
+            truncated_name = truncated_name + '_' + str(counter)
+
         else:
             truncated_columns.update({truncated_name: 1})
 
