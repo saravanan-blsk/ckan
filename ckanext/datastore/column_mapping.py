@@ -13,18 +13,20 @@ class ColumnNameMapping:
         :return: dict, resourced data with formatted column names
         """
         mapped_columns = {}
+        truncated_columns = {}
         counter = 1
         for column in data_dict['fields']:
             if column['id'] is not None and column['id'] is not '':
-                if len(column['id']) > 50:
-                    old_name = column['id']
-                    mapped_name = 'mapped_column_' + str(counter)
+                if len(column['id']) > 60:
+                    original_name = column['id']
+                    mapped_name, truncated_columns = ColumnNameMapping.create_truncated_name(original_name,
+                                                                                             truncated_columns)
                     column['id'] = mapped_name
                     counter += 1
-                    mapped_columns[mapped_name] = old_name
+                    mapped_columns[mapped_name] = original_name
                     for row in data_dict['records']:
                         dict_index = data_dict['records'].index(row)
-                        row[mapped_name] = row.pop(old_name)
+                        row[mapped_name] = row.pop(original_name)
                         data_dict['records'][dict_index] = row
         return data_dict, mapped_columns
 
@@ -61,3 +63,22 @@ class ColumnNameMapping:
         datastore_dict['primary_key'] = 'mapped_column'
 
         db.create(context, datastore_dict, False)
+
+    @staticmethod
+    def create_truncated_name(original_name, truncated_columns):
+        """creates truncated name from original column names
+
+        :param original_name: str, original column name
+        :param truncated_columns: dict , dictionary of truncated_column name
+        :return: str, dict, truncated column name, updated dictionary of truncated_column names
+        """
+        truncated_name = original_name[:60]
+
+        if truncated_name in truncated_columns:
+            counter = truncated_columns.get(truncated_name, 0) + 1
+            truncated_name = truncated_name + '_' + str(counter)
+            truncated_columns.update({truncated_name: counter})
+
+        truncated_columns.update({truncated_name: 1})
+
+        return truncated_name, truncated_columns
