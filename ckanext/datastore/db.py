@@ -17,6 +17,7 @@ import ckan.plugins as p
 import ckan.plugins.toolkit as toolkit
 import ckanext.datastore.helpers as datastore_helpers
 import ckanext.datastore.interfaces as interfaces
+from ckanext.datastore.column_mapping import ColumnNameMapping as mapper
 import psycopg2.extras
 import sqlalchemy
 from ckan.common import OrderedDict, config
@@ -1068,7 +1069,7 @@ def create(context, data_dict, counter=True):
 
     # Check if the column names are already mapped
     if counter:
-        data_dict, mapped_columns = map_column_name(data_dict)
+        data_dict, mapped_columns = mapper.map_column_name(data_dict)
 
     trans = context['connection'].begin()
     try:
@@ -1118,7 +1119,7 @@ def create(context, data_dict, counter=True):
         raise
     finally:
         if counter and len(mapped_columns) != 0:
-            create_mapping_table(context, data_dict, mapped_columns)
+            mapper.create_mapping_table(context, data_dict, mapped_columns)
         context['connection'].close()
 
 
@@ -1348,60 +1349,3 @@ def get_all_resources_ids_in_datastore():
                                         WHERE alias_of IS NULL''')
     query = _get_engine(data_dict).execute(resources_sql)
     return [q[0] for q in query.fetchall()]
-
-
-def map_column_name(data_dict):
-    """Map lengthy column names
-
-    :param data_dict: dict, dictionary of resource data
-    :return: dict, resourced data with formatted column names
-    """
-    mapped_columns = {}
-    counter = 1
-    for column in data_dict['fields']:
-        if column['id'] is not None and column['id'] is not '':
-            if len(column['id']) > 50:
-                old_name = column['id']
-                mapped_name = 'mapped_column_' + str(counter)
-                column['id'] = mapped_name
-                counter += 1
-                mapped_columns[mapped_name] = old_name
-                for row in data_dict['records']:
-                    dict_index = data_dict['records'].index(row)
-                    row[mapped_name] = row.pop(old_name)
-                    data_dict['records'][dict_index] = row
-    return data_dict, mapped_columns
-
-
-def create_mapping_table(context, data_dict, mapped_columns):
-    """Create table to store the metadata of mapped column names
-
-    :param mapped_columns: dict, mapped column names
-    :param context: context
-    :param data_dict: data_dict
-    """
-    datastore_dict = {}
-    resource_dict = toolkit.get_action('resource_create')(
-         context, data_dict['resource'])
-    resource_id = resource_dict['id']
-    package_id = data_dict['resource']['package_id']
-
-    for row in data_dict['fields']:
-        print row
-
-    datastore_dict['connection_url'] = data_dict['connection_url']
-
-    datastore_dict['resource_id'] = str(resource_id)
-    fields = [{'id': 'mapped_column', 'type': 'text'},
-              {'id': 'original_name', 'type': 'text'}]
-
-    datastore_dict['fields'] = fields
-    records = []
-    for key, value in mapped_columns.iteritems():
-        row = {'mapped_column': key, 'original_name': value}
-        records.append(row)
-
-    datastore_dict['records'] = records
-    datastore_dict['primary_key'] = 'mapped_column'
-
-    create(context, datastore_dict, False)
