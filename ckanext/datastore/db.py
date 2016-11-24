@@ -1405,15 +1405,3 @@ def create_mapping_table(context, data_dict, mapped_columns):
     datastore_dict['primary_key'] = 'mapped_column'
 
     create(context, datastore_dict, False)
-
-
-
-
-
-
-
-
-
-
-
-
