@@ -21,6 +21,7 @@ import ckan.plugins as p
 import ckan.plugins.toolkit as toolkit
 import ckanext.datastore.interfaces as interfaces
 import ckanext.datastore.helpers as datastore_helpers
+from ckanext.datastore.column_mapping import ColumnNameMapping as mapper
 from ckan.common import OrderedDict, config
 
 log = logging.getLogger(__name__)
@@ -1027,7 +1028,7 @@ def format_results(context, results, data_dict):
     return _unrename_json_field(data_dict)
 
 
-def create(context, data_dict):
+def create(context, data_dict, counter=True):
     '''
     The first row will be used to guess types not in the fields and the
     guessed types will be added to the headers permanently.
@@ -1057,6 +1058,12 @@ def create(context, data_dict):
     _cache_types(context)
 
     _rename_json_field(data_dict)
+
+    mapped_columns = {}
+
+    # Check if the column names are already mapped
+    if counter:
+        data_dict, mapped_columns = mapper.map_column_name(data_dict)
 
     trans = context['connection'].begin()
     try:
@@ -1105,6 +1112,8 @@ def create(context, data_dict):
         trans.rollback()
         raise
     finally:
+        if counter and len(mapped_columns) != 0:
+            mapper.create_mapping_table(context, data_dict, mapped_columns)
         context['connection'].close()
 
 
