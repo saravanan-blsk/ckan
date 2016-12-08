@@ -45,31 +45,40 @@ class ColumnNameMapping:
             dataset_name = data_dict.get('resource').get('name')
             data_dict['resource']['name'] = dataset_name + '_mapping'
 
-        except Exception:
 
+        except Exception:
             resource_data = toolkit.get_action('resource_show')(
                 context, {'id': data_dict.get('resource_id')})
-
-            dataset_name = resource_data.get('name')
+            # print "----------------------resource_data--------------------------------"
+            # print resource_data
+            # print "------------------------------------------------------"
+            temp_name = resource_data.get('name')
+            dataset_name = temp_name if temp_name is not None else resource_data.get('description')
             data_dict.update({'resource': {}})
             data_dict['resource'].update({'name': dataset_name + '_mapping'})
             data_dict['resource'].update({'package_id': resource_data.get('package_id')})
+
+        print "Checking if the resource exists"
+        if ColumnNameMapping.check_resource_list(context, data_dict):
+            return
 
         resource_dict = toolkit.get_action('resource_create')(
             context, data_dict['resource'])
         resource_id = resource_dict['id']
         # package_id = data_dict['resource']['package_id']
-
+        print "Mapping Created:::::", resource_id
         datastore_dict['connection_url'] = data_dict['connection_url']
-
         datastore_dict['resource_id'] = str(resource_id)
         fields = [{'id': 'mapped_column', 'type': 'text'},
-                  {'id': 'original_name', 'type': 'text'}]
+                  {'id': 'original_name', 'type': 'text'},
+                  {'id': 'mapping_id', 'type': 'text'}]
 
         datastore_dict['fields'] = fields
         records = []
         for key, value in mapped_columns.iteritems():
-            row = {'mapped_column': key, 'original_name': value}
+            row = {'mapped_column': key,
+                   'original_name': value,
+                   'mapping_id': data_dict.get('resource_id')}
             records.append(row)
 
         datastore_dict['records'] = records
@@ -99,3 +108,53 @@ class ColumnNameMapping:
             truncated_columns.update({truncated_name: 1})
 
         return truncated_name, truncated_columns
+
+    @staticmethod
+    def check_resource_list(context, data_dict):
+        """Check if a resource already exists.
+
+        :param context: context
+        :param data_dict: dict, Dictionary of resource data
+        :return: boolean, True or False based on the existence of the resource
+        """
+
+        package_id = data_dict.get('resource').get('package_id')
+        package_data = toolkit.get_action('package_show')(
+            context, {'id': package_id})
+        resource_list = package_data.get('resources')
+        print "Resource_size:", len(resource_list)
+        # print '----------------------Package-----------------------------------------'
+        # print resource_list
+        # print '---------------------------------------------------------------'
+
+        for i, resource in enumerate(resource_list):
+            print "Running item", i, resource
+            try:
+                resource_data = toolkit.get_action('datastore_search')(
+                    context, {'resource_id': resource.get('id')})
+            except Exception as e:
+                print e
+                continue
+            # print '----------------------Single resource-----------------------------------------'
+            # print resource_data
+            # print '---------------------------------------------------------------'
+            print "................."
+            print "resource_id=", data_dict.get('resource_id')
+            print "package_id=", package_id
+            print "................."
+            records = resource_data.get('records')
+            print "______________________ Record--0 ____________________________________"
+            print records[0]
+            print "__________________________________________________________"
+            mapping_id = records[0].get('mapping_id') if records is not None else None
+            print "Mapping_Id:", mapping_id
+            if mapping_id is not None and mapping_id == data_dict.get('resource_id'):
+                print "----------Matching--------------"
+                return True
+            else:
+                print "Not matching..."
+                continue
+        print "Returning False"
+        return False
+
+
