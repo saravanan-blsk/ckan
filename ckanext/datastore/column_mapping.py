@@ -45,28 +45,22 @@ class ColumnNameMapping:
             dataset_name = data_dict.get('resource').get('name')
             data_dict['resource']['name'] = dataset_name + '_mapping'
 
-
         except Exception:
             resource_data = toolkit.get_action('resource_show')(
                 context, {'id': data_dict.get('resource_id')})
-            # print "----------------------resource_data--------------------------------"
-            # print resource_data
-            # print "------------------------------------------------------"
             temp_name = resource_data.get('name')
             dataset_name = temp_name if temp_name is not None else resource_data.get('description')
             data_dict.update({'resource': {}})
             data_dict['resource'].update({'name': dataset_name + '_mapping'})
             data_dict['resource'].update({'package_id': resource_data.get('package_id')})
 
-        print "Checking if the resource exists"
+        # Check if the resource exists
         if ColumnNameMapping.check_resource_list(context, data_dict):
             return
 
         resource_dict = toolkit.get_action('resource_create')(
             context, data_dict['resource'])
         resource_id = resource_dict['id']
-        # package_id = data_dict['resource']['package_id']
-        print "Mapping Created:::::", resource_id
         datastore_dict['connection_url'] = data_dict['connection_url']
         datastore_dict['resource_id'] = str(resource_id)
         fields = [{'id': 'mapped_column', 'type': 'text'},
@@ -96,7 +90,7 @@ class ColumnNameMapping:
         """
         truncated_name = original_name[:60]
 
-        # Sanitizing truncated name so that it can be insert into db
+        # Sanitizing truncated name so that it can be inserted into db
         truncated_name = truncated_name.replace(" ", "_").replace(",", "")
 
         if truncated_name in truncated_columns:
@@ -122,39 +116,18 @@ class ColumnNameMapping:
         package_data = toolkit.get_action('package_show')(
             context, {'id': package_id})
         resource_list = package_data.get('resources')
-        print "Resource_size:", len(resource_list)
-        # print '----------------------Package-----------------------------------------'
-        # print resource_list
-        # print '---------------------------------------------------------------'
 
-        for i, resource in enumerate(resource_list):
-            print "Running item", i, resource
+        for resource in resource_list:
             try:
                 resource_data = toolkit.get_action('datastore_search')(
                     context, {'resource_id': resource.get('id')})
-            except Exception as e:
-                print e
+            except Exception:
                 continue
-            # print '----------------------Single resource-----------------------------------------'
-            # print resource_data
-            # print '---------------------------------------------------------------'
-            print "................."
-            print "resource_id=", data_dict.get('resource_id')
-            print "package_id=", package_id
-            print "................."
             records = resource_data.get('records')
-            print "______________________ Record--0 ____________________________________"
-            print records[0]
-            print "__________________________________________________________"
             mapping_id = records[0].get('mapping_id') if records is not None else None
-            print "Mapping_Id:", mapping_id
             if mapping_id is not None and mapping_id == data_dict.get('resource_id'):
-                print "----------Matching--------------"
                 return True
-            else:
-                print "Not matching..."
-                continue
-        print "Returning False"
+
         return False
 
 
