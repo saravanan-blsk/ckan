@@ -445,7 +445,6 @@ def datastore_search(context, data_dict):
         raise p.toolkit.ObjectNotFound(p.toolkit._(
             'Resource "{0}" was not found.'.format(res_id)
         ))
-    results.close()
     if not data_dict['resource_id'] in WHITELISTED_RESOURCES:
         # Replace potential alias with real id to simplify access checks
         resource_id = results.fetchone()[0]
@@ -453,7 +452,6 @@ def datastore_search(context, data_dict):
             data_dict['resource_id'] = resource_id
 
         p.toolkit.check_access('datastore_search', context, data_dict)
-
     result = db.search(context, data_dict)
     result.pop('id', None)
     result.pop('connection_url')
