@@ -306,6 +306,10 @@ def create_table(context, data_dict):
     # check first row of data for additional fields
     extra_fields = []
     supplied_fields = data_dict.get('fields', [])
+
+    # Get table schema from mapping table
+    supplied_fields = get_table_schema(context, supplied_fields, data_dict)
+
     check_fields(context, supplied_fields)
     field_ids = _pluck('id', supplied_fields)
     records = data_dict.get('records')
@@ -348,8 +352,47 @@ def create_table(context, data_dict):
         data_dict['resource_id'],
         sql_fields
     )
+    print "The sql string:", sql_string
 
     context['connection'].execute(sql_string.replace('%', '%%'))
+
+
+def get_table_schema(context, fields, data_dict):
+    """Get the table schema from column mapping_table
+
+    :param context: dict, context
+    :param fields: fields
+    :param data_dict: dict, dictionary of data
+    :return:
+    """
+    mapping_data = []
+
+    # Get the mapping_table_data through datastore API
+    package_id = data_dict.get('resource').get('package_id')
+    package_data = toolkit.get_action('package_show')(
+        context, {'id': package_id})
+    resource_list = package_data.get('resources')
+
+    for resource in resource_list:
+        try:
+            resource_data = toolkit.get_action('datastore_search')(
+                context, {'resource_id': resource.get('id')})
+        except Exception:
+            continue
+        records = resource_data.get('records')
+        mapping_id = records[0].get('mapping_id') if records is not None else None
+        if mapping_id is not None and mapping_id == data_dict.get('resource_id'):
+            mapping_data = records
+
+    # Get the table schema from mapping_table
+    for record in mapping_data:
+        column_name = record.get('mapped_column')
+        for field in fields:
+            if field.get('id') == column_name:
+                field.update({'type:': record.get('type')})
+                break
+
+    return fields
 
 
 def _get_aliases(context, data_dict):
@@ -662,6 +705,7 @@ def upsert_data(context, data_dict):
         try:
             context['connection'].execute(sql_string, rows)
         except sqlalchemy.exc.DataError as err:
+            print "Error from DATAPUSHER:", err
             raise InvalidDataError(
                 toolkit._("The data was invalid (for example: a numeric value "
                           "is out of range or was inserted into a text field)."
