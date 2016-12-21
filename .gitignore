@@ -41,3 +41,6 @@ ckan_deb/DEBIAN/prerm
 # node.js
 node_modules/
 .idea/
+
+# virtual env
+env
