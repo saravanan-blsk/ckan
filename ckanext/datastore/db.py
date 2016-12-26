@@ -1160,10 +1160,10 @@ def create(context, data_dict, counter=True):
     except Exception, e:
         trans.rollback()
         raise
-    finally:
-        if counter and len(mapped_columns) != 0:
-            mapper.create_mapping_table(context, data_dict, mapped_columns)
-        context['connection'].close()
+    # finally:
+    #     # if counter and len(mapped_columns) != 0:
+        #     mapper.create_mapping_table(context, data_dict, mapped_columns)
+        # context['connection'].close()
 
 
 def upsert(context, data_dict):
