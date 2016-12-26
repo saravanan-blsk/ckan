@@ -307,9 +307,6 @@ def create_table(context, data_dict):
     extra_fields = []
     supplied_fields = data_dict.get('fields', [])
 
-    # Get table schema from mapping table
-    supplied_fields = get_table_schema(context, supplied_fields, data_dict)
-
     check_fields(context, supplied_fields)
     field_ids = _pluck('id', supplied_fields)
     records = data_dict.get('records')
@@ -368,7 +365,13 @@ def get_table_schema(context, fields, data_dict):
     mapping_data = []
 
     # Get the mapping_table_data through datastore API
-    package_id = data_dict.get('resource').get('package_id')
+    package_info = data_dict.get('resource')
+    if package_info is None:
+        # get package information using resource id
+        resource_id = data_dict.get('resource_id')
+        package_info = toolkit.get_action('resource_show')(context, {'id': resource_id})
+
+    package_id = package_info.get('package_id')
     package_data = toolkit.get_action('package_show')(
         context, {'id': package_id})
     resource_list = package_data.get('resources')
@@ -1109,7 +1112,7 @@ def create(context, data_dict, counter=True):
 
     # Check if the column names are already mapped
     if counter:
-        data_dict, mapped_columns = mapper.map_column_name(data_dict)
+        mapper.get_table_schema(context, data_dict)
 
     trans = context['connection'].begin()
     try:

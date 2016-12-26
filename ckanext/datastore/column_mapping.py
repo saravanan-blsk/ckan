@@ -1,6 +1,7 @@
 import ckan.plugins.toolkit as toolkit
 import db
 
+_TIMEOUT = 60000  # milliseconds
 
 class ColumnNameMapping:
     """Create data store table for mapping lengthy column names."""
@@ -31,7 +32,7 @@ class ColumnNameMapping:
         return data_dict, mapped_columns
 
     @staticmethod
-    def create_mapping_table(context, data_dict, mapped_columns):
+    def create_mapping_table_old(context, data_dict, mapped_columns):
         """Create table to store the metadata of mapped column names
 
         :param mapped_columns: dict, mapped column names
@@ -129,5 +130,96 @@ class ColumnNameMapping:
                 return True
 
         return False
+
+    @staticmethod
+    def create_mapping_table(context, data_dict):
+        """
+
+        :param context:
+        :param data_dict:
+        :return:
+        """
+        print "ola"
+        fields = data_dict.get('fields')
+        resource_id = data_dict.get('resource_id')
+        resource = data_dict.get('resource')
+        if resource is None:
+            resource = toolkit.get_action('resource_show')(context, {'id': resource_id})
+        package_id = resource.get('package_id')
+        resource_name = resource.get('name')
+        resource_name_mapping = resource_name + '_mapping'
+        resource_id_mapping = resource_id + '_mapping'
+
+        mapping_fields = [
+            {'id': 'mapped_name', 'type': 'text'},
+            {'id': 'original_name', 'type': 'text'},
+            {'id': 'column_type', 'type': 'text'},
+            {'id': 'resource_id', 'type': 'text'}
+        ]
+
+        mapping_records = []
+        for idx, field in enumerate(fields):
+            mapping_records.append({
+                'mapped_name': ColumnNameMapping.sanitize_column_name(field.get('id'), idx),
+                'original_name': field.get('id'),
+                'column_type': field.get('type'),
+                'resource_id': resource_id
+            })
+
+        mapping_data_dict = {
+            'resource_id': resource_id_mapping,
+            'primary_key': 'mapped_name',
+            'fields': mapping_fields,
+            'records': mapping_records,
+            'resource': {
+                'name': resource_name_mapping,
+                'package_id': package_id
+            },
+            'connection_url': data_dict['connection_url']
+        }
+
+        print "Feliz Navidad"
+        db.create(context, mapping_data_dict, False)
+
+    @staticmethod
+    def sanitize_column_name(column_name, idx):
+        if len(column_name) < 64:
+            return column_name
+
+        truncated_name = "%s_%d", (column_name[:60], idx)
+        return truncated_name
+
+    @staticmethod
+    def get_table_schema(context, data_dict):
+        """
+
+        :param context:
+        :param data_dict:
+        :return:
+        """
+        fields = data_dict.get('fields')
+        if fields is None:
+            raise Exception('Missing fields')
+
+        timeout = context.get('query_timeout', _TIMEOUT)
+
+        resource_id = data_dict.get('resource_id')
+        resource_id_mapping = resource_id + '_mapping'
+
+        try:
+            # check if table already existes
+            context['connection'].execute(
+                u'SET LOCAL statement_timeout TO {0}'.format(timeout))
+            result = context['connection'].execute(
+                u'SELECT * FROM pg_tables WHERE tablename = %s',
+                resource_id_mapping
+            ).fetchone()
+            if not result:
+                ColumnNameMapping.create_mapping_table(context, data_dict)
+            else:
+                print "Daym Daniel!!!"
+        except Exception, e:
+            print e
+            raise e
 
 
