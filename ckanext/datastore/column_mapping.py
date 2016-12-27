@@ -7,6 +7,7 @@ class ColumnNameMapping:
     """Create data store table for mapping lengthy column names."""
 
     mapped_column = {}
+    column_type = {}
 
     # @staticmethod
     # def map_column_name(data_dict):
@@ -186,14 +187,32 @@ class ColumnNameMapping:
         db.create(context, mapping_data_dict, False)
 
     @staticmethod
-    def update_data_dict(data_dict):
+    def update_data_dict(data_dict, result):
         print "In update data_dict"
         print ColumnNameMapping.mapped_column
+
+        # Updating mapped_column from mapping table
+        if len(ColumnNameMapping.mapped_column) <= 0:
+            for row in result:
+                ColumnNameMapping.mapped_column.update({
+                    row['original_name']: row['mapped_name']})
+                ColumnNameMapping.column_type.update({
+                    row['mapped_name']: row['column_type']
+                })
+        print "______________________  Mapped_column _________________________"
+        print ColumnNameMapping.mapped_column
+        print "_______________________________________________"
+        print "_____________________  Column_type  __________________________"
+        print ColumnNameMapping.column_type
+        print "_______________________________________________"
+
         # updating fields from data_dict
         for field in data_dict.get('fields'):
             if field.get('id') in ColumnNameMapping.mapped_column:
                 original_name = field.get('id')
-                field['id'] = ColumnNameMapping.mapped_column.get(original_name)
+                mapped_name = ColumnNameMapping.mapped_column.get(original_name)
+                field['id'] = mapped_name
+                field['type'] = ColumnNameMapping.column_type.get(mapped_name)
 
         # updating records from data_dict
         for record in data_dict.get('records'):
@@ -201,7 +220,18 @@ class ColumnNameMapping:
                 print 'original_name:', original_name
                 mapped_name = ColumnNameMapping.mapped_column.get(original_name)
                 record[mapped_name] = record.pop(original_name)
-                print record
+                if ColumnNameMapping.mapped_column.get(mapped_name) == 'text':
+                    record[mapped_name] = str(record[mapped_name])
+
+        # updating schema using mapping table
+        # if result is not None:
+        #     data_dict_fields = data_dict.get('fields')
+        #     mapping_records = result
+        #     print mapping_records.keys()
+        #     print "_____________________MAPPING____________________________"
+        #     for row in mapping_records:
+        #         print row.keys()
+        #     print "_________________________________________________"
 
     @staticmethod
     def sanitize_column_name(column_name, idx):
@@ -245,13 +275,19 @@ class ColumnNameMapping:
                 u'SET LOCAL statement_timeout TO {0}'.format(timeout))
             result = context['connection'].execute(
                 u'SELECT * FROM pg_tables WHERE tablename = %s',
-                resource_id_mapping
-            ).fetchone()
-            if not result:
+                resource_id_mapping)
+            print "_____________________REsutl____________________________"
+            print result
+            print "_________________________________________________"
+            print "rowCount:", result.rowcount
+            if not result or result.rowcount < 1:
                 ColumnNameMapping.create_mapping_table(context, data_dict)
                 print "Update done."
             else:
-                ColumnNameMapping.update_data_dict(data_dict)
+                query = 'SELECT * FROM "%s"' % resource_id_mapping
+                print "query:", query
+                result = context['connection'].execute(query)
+                ColumnNameMapping.update_data_dict(data_dict, result)
                 print "Daym Daniel!!!"
         except Exception, e:
             print e
