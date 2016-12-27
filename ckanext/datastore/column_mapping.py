@@ -151,7 +151,10 @@ class ColumnNameMapping:
         package_id = resource.get('package_id')
         tmp_name = resource.get('name')
         resource_name = tmp_name if tmp_name is not None else resource.get('description')
-        resource_name_mapping = resource_name + '_mapping'
+        if resource_name is None:
+            resource_name_mapping = 'unknown'
+        else:
+            resource_name_mapping = resource_name + '_mapping'
         resource_id_mapping = resource_id + '_mapping'
 
         mapping_fields = [
@@ -187,24 +190,25 @@ class ColumnNameMapping:
         db.create(context, mapping_data_dict, False)
 
     @staticmethod
-    def update_data_dict(data_dict, result):
+    def update_data_dict(data_dict, result=None):
         print "In update data_dict"
         print ColumnNameMapping.mapped_column
 
         # Updating mapped_column from mapping table
-        if len(ColumnNameMapping.mapped_column) <= 0:
-            for row in result:
-                ColumnNameMapping.mapped_column.update({
-                    row['original_name']: row['mapped_name']})
-                ColumnNameMapping.column_type.update({
-                    row['mapped_name']: row['column_type']
-                })
-        print "______________________  Mapped_column _________________________"
-        print ColumnNameMapping.mapped_column
-        print "_______________________________________________"
-        print "_____________________  Column_type  __________________________"
-        print ColumnNameMapping.column_type
-        print "_______________________________________________"
+        if result is not None:
+            if len(ColumnNameMapping.mapped_column) <= 0:
+                for row in result:
+                    ColumnNameMapping.mapped_column.update({
+                        row['original_name']: row['mapped_name']})
+                    ColumnNameMapping.column_type.update({
+                        row['mapped_name']: row['column_type']
+                    })
+            print "______________________  Mapped_column _________________________"
+            print ColumnNameMapping.mapped_column
+            print "_______________________________________________"
+            print "_____________________  Column_type  __________________________"
+            print ColumnNameMapping.column_type
+            print "_______________________________________________"
 
         # updating fields from data_dict
         for field in data_dict.get('fields'):
@@ -212,7 +216,9 @@ class ColumnNameMapping:
                 original_name = field.get('id')
                 mapped_name = ColumnNameMapping.mapped_column.get(original_name)
                 field['id'] = mapped_name
-                field['type'] = ColumnNameMapping.column_type.get(mapped_name)
+                field_type = ColumnNameMapping.column_type.get(mapped_name)
+                if field_type is not None:
+                    field['type'] = field_type
 
         # updating records from data_dict
         for record in data_dict.get('records'):
@@ -220,7 +226,7 @@ class ColumnNameMapping:
                 print 'original_name:', original_name
                 mapped_name = ColumnNameMapping.mapped_column.get(original_name)
                 record[mapped_name] = record.pop(original_name)
-                if ColumnNameMapping.mapped_column.get(mapped_name) == 'text':
+                if ColumnNameMapping.column_type.get(mapped_name) == 'text':
                     record[mapped_name] = str(record[mapped_name])
 
         # updating schema using mapping table
@@ -268,6 +274,7 @@ class ColumnNameMapping:
 
         resource_id = data_dict.get('resource_id')
         resource_id_mapping = resource_id + '_mapping'
+        print resource_id
 
         try:
             # check if table already exists
