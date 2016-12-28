@@ -106,7 +106,7 @@ def _get_engine(data_dict):
     if not engine:
         extras = {'url': connection_url,
                   'max_overflow': 10,
-                  'pool_size': 20}
+                  'pool_size': 100}
         engine = sqlalchemy.engine_from_config(config,
                                                'ckan.datastore.sqlalchemy.',
                                                **extras)
