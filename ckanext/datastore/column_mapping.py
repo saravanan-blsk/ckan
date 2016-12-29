@@ -193,14 +193,13 @@ class ColumnNameMapping:
     def update_data_dict(data_dict, result=None):
         resource_id = data_dict.get('resource_id')
         print "In update data_dict"
-        print ColumnNameMapping.mapped_column.get(resource_id)
         if ColumnNameMapping.column_type.get(resource_id) is None:
             ColumnNameMapping.column_type.update({resource_id: {}})
+        if ColumnNameMapping.mapped_column.get(resource_id) is None:
+            ColumnNameMapping.mapped_column.update({resource_id: {}})
 
         # Updating mapped_column from mapping table
         if result is not None:
-            if ColumnNameMapping.mapped_column.get(resource_id) is None:
-                ColumnNameMapping.mapped_column.update({resource_id: {}})
             for row in result:
                 ColumnNameMapping.mapped_column[resource_id].update({
                     row['original_name']: row['mapped_name']})
