@@ -349,7 +349,6 @@ def create_table(context, data_dict):
         data_dict['resource_id'],
         sql_fields
     )
-    print "The sql string:", sql_string
 
     context['connection'].execute(sql_string.replace('%', '%%'))
 
@@ -1108,8 +1107,6 @@ def create(context, data_dict, counter=True):
 
     _rename_json_field(data_dict)
 
-    mapped_columns = {}
-
     # Check if the column names are already mapped
     if counter:
         mapper.get_table_schema(context, data_dict)
@@ -1160,10 +1157,8 @@ def create(context, data_dict, counter=True):
     except Exception, e:
         trans.rollback()
         raise
-    # finally:
-    #     # if counter and len(mapped_columns) != 0:
-        #     mapper.create_mapping_table(context, data_dict, mapped_columns)
-        # context['connection'].close()
+    finally:
+        context['connection'].close()
 
 
 def upsert(context, data_dict):
