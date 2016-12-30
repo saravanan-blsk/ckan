@@ -1157,8 +1157,8 @@ def create(context, data_dict, counter=True):
     except Exception, e:
         trans.rollback()
         raise
-    finally:
-        context['connection'].close()
+    # finally:
+    #     context['connection'].close()
 
 
 def upsert(context, data_dict):
