@@ -141,7 +141,6 @@ class ColumnNameMapping:
 
         resource_id = data_dict.get('resource_id')
         resource_id_mapping = resource_id + '_mapping'
-
         try:
             # check if table already exists
             context['connection'].execute(
@@ -149,13 +148,41 @@ class ColumnNameMapping:
             result = context['connection'].execute(
                 u'SELECT * FROM pg_tables WHERE tablename = %s',
                 resource_id_mapping)
+
+            # Check if mapping_table has records
             if not result or result.rowcount < 1:
+
                 ColumnNameMapping.create_mapping_table(context, data_dict)
             else:
                 query = 'SELECT * FROM "%s"' % resource_id_mapping
                 result = context['connection'].execute(query)
-                ColumnNameMapping.update_data_dict(data_dict, result)
+                # Check whether the schema of data_dict and mapping_table are same
+                if not ColumnNameMapping.check_mapping_table_schema(fields, result):
+                    # Dropping mapping table so that we can insert new data.
+                    delete_query = 'DROP TABLE "%s"' % resource_id_mapping
+                    context['connection'].execute(delete_query)
+                    ColumnNameMapping.create_mapping_table(context, data_dict)
+                else:
+                    ColumnNameMapping.update_data_dict(data_dict, result)
         except Exception, e:
             raise e
 
+    @staticmethod
+    def check_mapping_table_schema(fields, result_dict):
+        """
+        Verify if the resource schema matches mapping_table schema.
+        :param fields: dict, dictionary containing data_dict fields
+        :param result_dict: dict, mapping table dictionary
+        :return: bool, True (or) False
+        """
+        field_names = [x.get('id') for x in fields]
+        mapping_table_fields = [x['original_name'] for x in result_dict]
+
+        if len(field_names) != len(mapping_table_fields):
+            return False
+
+        if len(set(field_names).intersection(mapping_table_fields)) != len(field_names):
+            return False
+
+        return True
 
