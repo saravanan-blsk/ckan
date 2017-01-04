@@ -58,8 +58,9 @@ class ColumnNameMapping:
             },
             'connection_url': data_dict['connection_url']
         }
-
+        print "bman....."
         ColumnNameMapping.update_data_dict(data_dict)
+        print "vamn...."
         db.create(context, mapping_data_dict, False)
 
     @staticmethod
@@ -158,11 +159,16 @@ class ColumnNameMapping:
                 result = context['connection'].execute(query)
                 # Check whether the schema of data_dict and mapping_table are same
                 if not ColumnNameMapping.check_mapping_table_schema(fields, result):
+                    print "check mapp!"
                     # Dropping mapping table so that we can insert new data.
                     delete_query = 'DROP TABLE "%s"' % resource_id_mapping
                     context['connection'].execute(delete_query)
+                    ColumnNameMapping.mapped_column.pop(resource_id)
+                    ColumnNameMapping.column_type.pop(resource_id)
                     ColumnNameMapping.create_mapping_table(context, data_dict)
                 else:
+                    print "Update !!!"
+                    result = context['connection'].execute(query)
                     ColumnNameMapping.update_data_dict(data_dict, result)
         except Exception, e:
             raise e
