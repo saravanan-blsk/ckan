@@ -152,26 +152,40 @@ class ColumnNameMapping:
 
             # Check if mapping_table has records
             if not result or result.rowcount < 1:
-
                 ColumnNameMapping.create_mapping_table(context, data_dict)
             else:
-                query = 'SELECT * FROM "%s"' % resource_id_mapping
-                result = context['connection'].execute(query)
-                # Check whether the schema of data_dict and mapping_table are same
-                if not ColumnNameMapping.check_mapping_table_schema(fields, result):
-                    print "check mapp!"
-                    # Dropping mapping table so that we can insert new data.
-                    delete_query = 'DROP TABLE "%s"' % resource_id_mapping
-                    context['connection'].execute(delete_query)
-                    ColumnNameMapping.mapped_column.pop(resource_id)
-                    ColumnNameMapping.column_type.pop(resource_id)
-                    ColumnNameMapping.create_mapping_table(context, data_dict)
-                else:
-                    print "Update !!!"
-                    result = context['connection'].execute(query)
-                    ColumnNameMapping.update_data_dict(data_dict, result)
+                ColumnNameMapping.update_mapping_table(context, data_dict, fields)
         except Exception, e:
             raise e
+
+    @staticmethod
+    def update_mapping_table(context, data_dict, fields):
+        """
+        Update mapping table and data_dict
+        :param context: dict, context
+        :param data_dict: dict, Data dictionary
+        :param fields:
+        :return:
+        """
+        resource_id = data_dict.get('resource_id')
+        resource_id_mapping = resource_id + '_mapping'
+        query = 'SELECT * FROM "%s"' % resource_id_mapping
+        result = context['connection'].execute(query)
+        # Check whether the schema of data_dict and mapping_table are same
+        if not ColumnNameMapping.check_mapping_table_schema(fields, result):
+            print "check mapp!"
+            # Dropping mapping table so that we can insert new data.
+            delete_query = 'DROP TABLE "%s"' % resource_id_mapping
+            context['connection'].execute(delete_query)
+            if resource_id in ColumnNameMapping.mapped_column:
+                ColumnNameMapping.mapped_column.pop(resource_id)
+            if resource_id in ColumnNameMapping.column_type:
+                ColumnNameMapping.column_type.pop(resource_id)
+            ColumnNameMapping.create_mapping_table(context, data_dict)
+        else:
+            print "Update !!!"
+            result = context['connection'].execute(query)
+            ColumnNameMapping.update_data_dict(data_dict, result)
 
     @staticmethod
     def check_mapping_table_schema(fields, result_dict):
