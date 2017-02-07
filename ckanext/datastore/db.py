@@ -707,11 +707,8 @@ def upsert_data(context, data_dict):
         try:
             context['connection'].execute(sql_string, rows)
         except sqlalchemy.exc.DataError as err:
-            print "Error from DATAPUSHER:", err
             raise InvalidDataError(
-                toolkit._("The data was invalid (for example: a numeric value "
-                          "is out of range or was inserted into a text field)."
-                          ))
+                toolkit._(create_html_error_message(err)))
 
     elif method in [_UPDATE, _UPSERT]:
         unique_keys = _get_unique_key(context, data_dict)
@@ -1388,3 +1385,26 @@ def get_all_resources_ids_in_datastore():
                                         WHERE alias_of IS NULL''')
     query = _get_engine(data_dict).execute(resources_sql)
     return [q[0] for q in query.fetchall()]
+
+
+def create_html_error_message(error_message):
+    """
+    Create HTML error message from exception messages.
+    :param error_message: str, Error message
+    :return: str, HTML error message
+    """
+    error_string = str(error_message)
+
+    error_info = "<font color ='red'> The data was invalid (for example: a numeric value is out of " \
+                 "range or was inserted into a text field)</font><br>"
+
+    begin_index = error_string.index('(DataError) invalid')
+    last_index = error_string.index("'INSERT INTO")
+    message = error_string[begin_index:last_index]
+
+    html_message_part1 = "<font color ='green'>DB Error:{}</font><br>".format(message)
+
+    html_message_part2 = "<font color ='blue'>{}</font>".format(error_string[last_index:])
+
+    return error_info + html_message_part1 + html_message_part2
+

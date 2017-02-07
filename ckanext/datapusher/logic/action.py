@@ -13,6 +13,7 @@ import ckan.lib.navl.dictization_functions
 import ckan.logic as logic
 import ckan.plugins as p
 from ckan.common import config
+from flask import Markup
 import ckanext.datapusher.logic.schema as dpschema
 import ckanext.datapusher.interfaces as interfaces
 
@@ -273,6 +274,10 @@ def datapusher_status(context, data_dict):
         except (requests.exceptions.ConnectionError,
                 requests.exceptions.HTTPError):
             job_detail = {'error': 'cannot connect to datapusher'}
+
+    # Converting string message to HTML.
+    message = job_detail.get('error').get('message')
+    job_detail['error']['message'] = Markup(message)
 
     return {
         'status': task['state'],
