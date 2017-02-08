@@ -2,6 +2,7 @@
 
 import json
 import datetime
+import time
 import os
 import urllib
 import urllib2
@@ -73,6 +74,11 @@ class InvalidDataError(Exception):
     add a non-numeric value like "foo" to it, this exception should be raised.
 
     """
+    pass
+
+
+class LogFileError(Exception):
+    """Raise this exception when a log file related error occurs."""
     pass
 
 
@@ -707,6 +713,7 @@ def upsert_data(context, data_dict):
         try:
             context['connection'].execute(sql_string, rows)
         except sqlalchemy.exc.DataError as err:
+            log_failed_jobs(data_dict, err)
             raise InvalidDataError(
                 toolkit._(create_html_error_message(err)))
 
@@ -1408,3 +1415,25 @@ def create_html_error_message(error_message):
 
     return error_info + html_message_part1 + html_message_part2
 
+
+def log_failed_jobs(data_dict, err):
+    """
+    Create logs for the failed harvester/ datapusher jobs.
+    :param data_dict: dict, dictionary containing data
+    :param err:sqlalchemy.exc.DataError
+    """
+    error = str(err)
+    log_file_path = config.__getitem__('ckan.harvest.logfile')
+    log_file_name = log_file_path + time.strftime('%d-%m-%Y') + '.log'
+
+    resource_id = data_dict.get('resource_id')
+    message_index = error.index("'INSERT INTO")
+    error_message = error[:message_index]
+    file_content = resource_id + '\t--\t' + error_message + '\n'
+
+    try:
+        with open(log_file_name, 'a') as log_file:
+            log_file.write(file_content)
+
+    except Exception as os_err:
+        raise LogFileError(os_err)
