@@ -276,8 +276,10 @@ def datapusher_status(context, data_dict):
             job_detail = {'error': 'cannot connect to datapusher'}
 
     # Converting string message to HTML.
-    message = job_detail.get('error').get('message')
-    job_detail['error']['message'] = Markup(message)
+    error = job_detail.get('error')
+    if isinstance(error, dict) and error.get('message') is not None:
+        message = error.get('message')
+        job_detail['error']['message'] = Markup(message)
 
     return {
         'status': task['state'],
