@@ -210,10 +210,10 @@ class ColumnNameMapping:
         :param resource_id: str, Id of the resource
         """
         mapping_table_id = resource_id + '_mapping'
-        select_query = 'SELECT * FROM {}'.format(mapping_table_id)
+        select_query = 'SELECT * FROM "%s"' % mapping_table_id
         result = context['connection'].execute(select_query)
         res_exists = result.rowcount > 0
 
         if res_exists:
-            delete_query = 'DROP TABLE {}'.format(mapping_table_id)
+            delete_query = 'DROP TABLE "%s"' % mapping_table_id
             context['connection'].execute(delete_query)
