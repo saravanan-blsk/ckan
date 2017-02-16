@@ -202,3 +202,18 @@ class ColumnNameMapping:
 
         return True
 
+    @staticmethod
+    def delete_mapping_table(context, resource_id):
+        """
+        Delete the mapping table associated with a resource id.
+        :param context: dict, Context
+        :param resource_id: str, Id of the resource
+        """
+        mapping_table_id = resource_id + '_mapping'
+        select_query = 'SELECT * FROM {}'.format(mapping_table_id)
+        result = context['connection'].execute(select_query)
+        res_exists = result.rowcount > 0
+
+        if res_exists:
+            delete_query = 'DROP TABLE {}'.format(mapping_table_id)
+            context['connection'].execute(delete_query)

@@ -1231,6 +1231,8 @@ def delete(context, data_dict):
         else:
             delete_data(context, data_dict)
 
+        # Delete mapping table for the resource
+        mapper.delete_mapping_table(context, data_dict['resource_id'])
         trans.commit()
         return _unrename_json_field(data_dict)
     except Exception:
