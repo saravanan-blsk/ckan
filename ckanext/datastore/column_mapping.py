@@ -49,7 +49,7 @@ class ColumnNameMapping:
 
         mapping_data_dict = {
             'resource_id': resource_id_mapping,
-            'primary_key': 'mapped_name',
+            'primary_key': 'original_name',
             'fields': mapping_fields,
             'records': mapping_records,
             'resource': {
@@ -84,20 +84,22 @@ class ColumnNameMapping:
                 })
 
         # updating fields from data_dict
-        for field in data_dict.get('fields'):
-            if field.get('id') in ColumnNameMapping.mapped_column[resource_id]:
-                original_name = field.get('id')
-                mapped_name = ColumnNameMapping.mapped_column[resource_id].get(original_name)
-                field['id'] = mapped_name
-                field_type = ColumnNameMapping.column_type[resource_id].get(mapped_name)
-                if field_type is not None:
-                    field['type'] = field_type
+        if data_dict.get('fields') is not None:
+            for field in data_dict.get('fields'):
+                if field.get('id') in ColumnNameMapping.mapped_column[resource_id]:
+                    original_name = field.get('id')
+                    mapped_name = ColumnNameMapping.mapped_column[resource_id].get(original_name)
+                    field['id'] = mapped_name
+                    field_type = ColumnNameMapping.column_type[resource_id].get(mapped_name)
+                    if field_type is not None:
+                        field['type'] = field_type
 
         # updating records from data_dict
-        for record in data_dict.get('records'):
-            for original_name in ColumnNameMapping.mapped_column[resource_id].keys():
-                mapped_name = ColumnNameMapping.mapped_column[resource_id].get(original_name)
-                record[mapped_name] = record.pop(original_name)
+        if data_dict.get('records') is not None:
+            for record in data_dict.get('records'):
+                for original_name in ColumnNameMapping.mapped_column[resource_id].keys():
+                    mapped_name = ColumnNameMapping.mapped_column[resource_id].get(original_name)
+                    record[mapped_name] = record.pop(original_name)
 
     @staticmethod
     def sanitize_column_name(column_name, idx, resource_id):
